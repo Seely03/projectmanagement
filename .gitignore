@@ -110,3 +110,4 @@ venv.bak/
 *.db
 *.sqlite3
 .DS_Store 
+Flask App 2.7z

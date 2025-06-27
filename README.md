@@ -17,10 +17,6 @@ A web-based project management tool built with Flask that allows users to create
 
 ## Local Development Setup
 
-1. Clone the repository:
-```
-git clone <repository-url>
-cd project-manager
 ```
 
 2. Create a virtual environment and activate it:
