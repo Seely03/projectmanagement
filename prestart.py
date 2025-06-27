@@ -6,7 +6,7 @@ from sqlalchemy import inspect
 
 def run_migrations():
     print("Running migrations...")
-    alembic_ini_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'migrations', 'alembic.ini'))
+    alembic_ini_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'alembic.ini'))
     alembic_cfg = Config(alembic_ini_path)
     command.upgrade(alembic_cfg, 'head')
     print("Migrations complete.")
