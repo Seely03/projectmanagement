@@ -2,6 +2,8 @@ from app import app
 from app import db
 from app.models.models import User, Project, Task
 import os
+from alembic.config import Config
+from alembic import command
 
 # Determine which auth method to use
 use_cognito = os.environ.get('USE_COGNITO_AUTH', 'false').lower() == 'true'
@@ -22,6 +24,26 @@ else:
     # Use local authentication (development)
     from app.controllers.auth_controller import *
     print("Using local authentication")
+
+def run_migrations():
+    # Path to alembic.ini
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), 'migrations', 'alembic.ini'))
+    command.upgrade(alembic_cfg, 'head')
+
+def seed_sample_data():
+    from sample_data import app as sample_app
+    # Only seed if there are no users
+    with sample_app.app_context():
+        from app.models.models import User
+        from app import db
+        if User.query.count() == 0:
+            import sample_data  # This will run the seeding logic
+
+# If running under Gunicorn (i.e., not __main__), run migrations and seed
+if os.environ.get('RENDER', None) or os.environ.get('GUNICORN_CMD_ARGS', None) or os.environ.get('DYNO', None):
+    with app.app_context():
+        run_migrations()
+        seed_sample_data()
 
 if __name__ == '__main__':
     with app.app_context():
