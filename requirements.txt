@@ -9,4 +9,5 @@ flask-wtf==1.1.1
 email-validator==2.0.0
 pytest
 Flask-Migrate
-requests 
+requests
+psycopg2
