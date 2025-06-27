@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Project Manager - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <div class="text-center mb-5">
+                        <h1 class="display-4 fw-bold text-primary">Project Manager</h1>
+                        <p class="lead">Efficiently manage your projects and tasks in one place</p>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-4">
+                            <div class="p-4 rounded bg-light">
+                                <i class="fas fa-tasks fa-3x text-primary mb-3"></i>
+                                <h3>Organize Tasks</h3>
+                                <p>Create, track, and manage your tasks with ease.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="p-4 rounded bg-light">
+                                <i class="fas fa-project-diagram fa-3x text-primary mb-3"></i>
+                                <h3>Manage Projects</h3>
+                                <p>Keep all your projects organized and on schedule.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="p-4 rounded bg-light">
+                                <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                                <h3>Team Collaboration</h3>
+                                <p>Work together with your team to accomplish goals.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        {% if current_user.is_authenticated %}
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg me-2">Login</a>
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

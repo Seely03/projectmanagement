@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.title }} - Project Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>{{ project.title }}</h1>
+        <div class="btn-group">
+            <a href="{{ url_for('edit_project', project_id=project.id) }}" 
+               class="btn btn-warning"
+               data-bs-toggle="tooltip" 
+               data-bs-placement="top" 
+               title="Edit Project">
+                <i class="fas fa-edit"></i> Edit Project
+            </a>
+            <span data-bs-toggle="tooltip" 
+                  data-bs-placement="top" 
+                  title="Delete Project">
+                <button type="button" 
+                        class="btn btn-danger" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteProjectModal">
+                    <i class="fas fa-trash"></i> Delete Project
+                </button>
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Project Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Status</h6>
+                            {% if project.status == 'In Progress' %}
+                            <span class="badge bg-warning">{{ project.status }}</span>
+                            {% if project.end_date and project.end_date < now %}
+                            <span class="badge bg-danger ms-2" title="Project is overdue">
+                                <i class="fas fa-exclamation-triangle"></i> Overdue
+                            </span>
+                            {% endif %}
+                            {% elif project.status == 'Completed' %}
+                            <span class="badge bg-success">{{ project.status }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ project.status }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Priority</h6>
+                            {% if project.priority == 'High' %}
+                            <span class="badge bg-danger">{{ project.priority }}</span>
+                            {% elif project.priority == 'Medium' %}
+                            <span class="badge bg-warning">{{ project.priority }}</span>
+                            {% else %}
+                            <span class="badge bg-info">{{ project.priority }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Start Date</h6>
+                            <p>{{ project.start_date.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">End Date</h6>
+                            <p>
+                                {% if project.end_date %}
+                                {{ project.end_date.strftime('%Y-%m-%d') }}
+                                {% if project.end_date < now and project.status != 'Completed' %}
+                                <span class="badge bg-danger ms-2" title="Project is overdue">
+                                    <i class="fas fa-exclamation-triangle"></i> Overdue
+                                </span>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Description</h6>
+                        <p>{{ project.description or 'No description provided.' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i> Tasks
+                    </h5>
+                    <a href="{{ url_for('new_task', project_id=project.id) }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus"></i> New Task
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Task Search Bar -->
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="taskSearchInput" placeholder="Search tasks..." autocomplete="off">
+                    </div>
+                    {% if tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Description</th>
+                                    <th>Assignee</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Due Date</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr class="searchable-task" data-search="{{ task.title }} {{ task.description }} {{ task.assignee.username if task.assignee else '' }} {{ task.status }} {{ task.priority }} {{ task.due_date }}">
+                                    <td>{{ task.title }}</td>
+                                    <td>{{ task.description }}</td>
+                                    <td>{{ task.assignee.username if task.assignee else 'Unassigned' }}</td>
+                                    <td>{{ task.status }}</td>
+                                    <td>{{ task.priority }}</td>
+                                    <td>{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '' }}</td>
+                                    <td class="text-center">
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('view_task', project_id=project.id, task_id=task.id) }}" 
+                                               class="btn btn-sm btn-outline-primary"
+                                               data-bs-toggle="tooltip" 
+                                               data-bs-placement="top" 
+                                               title="View Task">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if current_user.is_admin or (task.user_id == current_user.id) or (project.user_id == current_user.id) %}
+                                                <a href="{{ url_for('edit_task', project_id=project.id, task_id=task.id) }}" 
+                                                   class="btn btn-sm btn-outline-warning"
+                                                   data-bs-toggle="tooltip" 
+                                                   data-bs-placement="top" 
+                                                   title="Edit Task">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            {% endif %}
+                                            {% if current_user.is_admin or (project.user_id == current_user.id) %}
+                                                <span data-bs-toggle="tooltip" 
+                                                      data-bs-placement="top" 
+                                                      title="Delete Task">
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-danger" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#deleteTaskModal{{ task.id }}">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Delete Task Modal -->
+                                <div class="modal fade" id="deleteTaskModal{{ task.id }}" tabindex="-1" aria-labelledby="deleteTaskModalLabel{{ task.id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="deleteTaskModalLabel{{ task.id }}">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Are you sure you want to delete the task "{{ task.title }}"?</p>
+                                                <p class="text-danger">This action cannot be undone.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('delete_task', project_id=project.id, task_id=task.id) }}" method="POST">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <p>No tasks found. Create your first task!</p>
+                        <a href="{{ url_for('new_task', project_id=project.id) }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> New Task
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> Task Progress
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set total_tasks = tasks|length %}
+                    {% if total_tasks > 0 %}
+                        {% set completed_tasks = tasks|selectattr('status', 'equalto', 'Done')|list|length %}
+                        {% set progress_percentage = (completed_tasks / total_tasks * 100)|round|int %}
+                        <div class="progress mb-1 project-progress-bar" style="height: 25px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress_percentage }}%;"
+                                 aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                        <div class="text-center mb-3" style="font-weight: 500;">{{ progress_percentage }}%</div>
+                        <div class="d-flex justify-content-between">
+                            <span>Completed: {{ completed_tasks }}</span>
+                            <span>Total: {{ total_tasks }}</span>
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted">No tasks to show progress</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Team Members
+                    </h5>
+                    {% if current_user.is_admin or project.user_id == current_user.id %}
+                    <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                        <i class="fas fa-user-plus"></i> Add Member
+                    </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for member in project_members %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                {{ member.user.username }}
+                                {% if member.user.is_admin %}
+                                <span class="badge bg-danger">Admin</span>
+                                {% elif member.user.id == project.user_id %}
+                                <span class="badge bg-primary">Owner</span>
+                                {% else %}
+                                <span class="badge bg-success">Member</span>
+                                {% endif %}
+                            </div>
+                            {% if (current_user.is_admin or project.user_id == current_user.id) and member.user.id != project.user_id %}
+                            <form action="{{ url_for('remove_project_member', project_id=project.id, user_id=member.user.id) }}" 
+                                  method="POST" 
+                                  class="d-inline"
+                                  onsubmit="return confirm('Are you sure you want to remove this member from the project?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-user-minus"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Member Modal -->
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMemberModalLabel">Add Team Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('add_project_member', project_id=project.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="user_id" class="form-label">Select User</label>
+                        <select class="form-select" id="user_id" name="user_id" required>
+                            <option value="">Choose a user...</option>
+                            {% for user in users %}
+                                {% if user.id not in member_ids and user.id != project.user_id %}
+                                <option value="{{ user.id }}">{{ user.username }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Project Modal -->
+<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProjectModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project "{{ project.title }}"?</p>
+                <p class="text-danger">This action cannot be undone. All tasks associated with this project will also be deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize all tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('taskSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                document.querySelectorAll('.searchable-task').forEach(function(row) {
+                    const text = row.getAttribute('data-search').toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+        }
+    });
+</script>
+{% endblock %} 

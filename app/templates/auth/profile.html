@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - Project Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">User Profile</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="avatar bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 100px; height: 100px; font-size: 2.5rem;">
+                            {{ current_user.username[:1].upper() }}
+                        </div>
+                        <h3>{{ current_user.username }}</h3>
+                        <p class="text-muted">{{ current_user.email }}</p>
+                        {% if current_user.is_admin %}
+                        <span class="badge bg-danger">Admin</span>
+                        {% else %}
+                        <span class="badge bg-info">Regular User</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-user text-primary me-2"></i> Account Information
+                                    </h5>
+                                    <p class="mb-1"><strong>Username:</strong> {{ current_user.username }}</p>
+                                    <p class="mb-1"><strong>Email:</strong> {{ current_user.email }}</p>
+                                    <p class="mb-0"><strong>Joined:</strong> {{ current_user.created_at.strftime('%Y-%m-%d') }}</p>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="{{ url_for('edit_profile') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i> Edit Profile
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-shield-alt text-primary me-2"></i> Security
+                                    </h5>
+                                    <p class="text-muted small">Manage your account security settings, including password changes.</p>
+                                    
+                                    {% if current_user.password_hash != 'cognito_auth' %}
+                                    <a href="{{ url_for('change_password') }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-key"></i> Change Password
+                                    </a>
+                                    {% else %}
+                                    <p class="small text-muted">Password changes are managed through Cognito.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if current_user.is_admin %}
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fas fa-user-shield text-danger me-2"></i> Admin Actions
+                                    </h5>
+                                    <p class="text-muted small mb-3">You have administrative privileges.</p>
+                                    <a href="{{ url_for('manage_users') }}" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-users-cog"></i> Manage Users
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

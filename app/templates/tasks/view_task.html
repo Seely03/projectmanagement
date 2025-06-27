@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} - Project Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i> {{ task.title }}
+                    </h5>
+                    <div class="btn-group">
+                        <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back to Project
+                        </a>
+                        {% if current_user.is_admin or (task.user_id == current_user.id) or (project.user_id == current_user.id) %}
+                        <a href="{{ url_for('edit_task', project_id=project.id, task_id=task.id) }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Edit Task
+                        </a>
+                        {% endif %}
+                        {% if current_user.is_admin or (project.user_id == current_user.id) %}
+                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
+                            <i class="fas fa-trash"></i> Delete Task
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Task Overview Section -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <h6 class="text-muted mb-2">Status</h6>
+                                <span id="mainStatusBadge" class="badge fs-6 {{ 'bg-secondary' if task.status == 'To Do' else 'bg-warning' if task.status == 'In Progress' else 'bg-success' }}">{{ task.status }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <h6 class="text-muted mb-2">Priority</h6>
+                                <span class="badge bg-{{ 'danger' if task.priority == 'High' else 'warning' if task.priority == 'Medium' else 'info' }} fs-6">
+                                    {{ task.priority }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 h-100">
+                                <h6 class="text-muted mb-2">Effort Points</h6>
+                                <span class="badge bg-secondary fs-6">
+                                    {{ task.effort_points }} points
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assignee Section -->
+                    <div class="border rounded p-3 mb-4">
+                        <h6 class="text-muted mb-2">Assignee</h6>
+                        {% if task.assignee %}
+                        <p class="mb-0">{{ task.assignee.username }}</p>
+                        {% else %}
+                        <p class="mb-0 text-muted">Unassigned</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Description Section -->
+                    <div class="border rounded p-3">
+                        <h6 class="text-muted mb-2">Description</h6>
+                        <p class="mb-0">{{ task.description or 'No description provided.' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram"></i> Project Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-muted">Project</h6>
+                    <p>
+                        <a href="{{ url_for('view_project', project_id=project.id) }}">
+                            {{ project.title }}
+                        </a>
+                    </p>
+                    
+                    <h6 class="text-muted">Project Status</h6>
+                    {% if project.status == 'Not Started' %}
+                    <span class="badge bg-secondary">{{ project.status }}</span>
+                    {% elif project.status == 'In Progress' %}
+                    <span class="badge bg-warning">{{ project.status }}</span>
+                    {% elif project.status == 'Completed' %}
+                    <span class="badge bg-success">{{ project.status }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ project.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if current_user.is_admin or (task.user_id == current_user.id) or (project.user_id == current_user.id) %}
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('update_task_status', project_id=project.id, task_id=task.id) }}" class="mb-3" id="quickActionsForm">
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Update Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="To Do" {% if task.status == 'To Do' %}selected{% endif %}>To Do</option>
+                                <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                <option value="Done" {% if task.status == 'Done' %}selected{% endif %}>Done</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Task Modal -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the task "{{ task.title }}"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_task', project_id=project.id, task_id=task.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quickActionsForm = document.getElementById('quickActionsForm');
+    if (quickActionsForm) {
+        quickActionsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(quickActionsForm);
+            const status = formData.get('status');
+            fetch(quickActionsForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the status badge in the main card
+                    const statusBadge = document.getElementById('mainStatusBadge');
+                    if (statusBadge) {
+                        statusBadge.textContent = status;
+                        statusBadge.className = 'badge fs-6 ' +
+                            (status === 'Done' ? 'bg-success' : status === 'In Progress' ? 'bg-warning' : 'bg-secondary');
+                    }
+                } else {
+                    // Show error toast/alert
+                    let alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                    alertDiv.setAttribute('role', 'alert');
+                    alertDiv.style.position = 'fixed';
+                    alertDiv.style.top = '20px';
+                    alertDiv.style.right = '20px';
+                    alertDiv.style.zIndex = 9999;
+                    alertDiv.innerHTML = `<strong>Error!</strong> ${data.message || 'Failed to update status.'}` +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                    document.body.appendChild(alertDiv);
+                    setTimeout(() => {
+                        alertDiv.classList.remove('show');
+                        alertDiv.classList.add('hide');
+                        setTimeout(() => alertDiv.remove(), 500);
+                    }, 2500);
+                }
+            })
+            .catch(() => {
+                let alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                alertDiv.setAttribute('role', 'alert');
+                alertDiv.style.position = 'fixed';
+                alertDiv.style.top = '20px';
+                alertDiv.style.right = '20px';
+                alertDiv.style.zIndex = 9999;
+                alertDiv.innerHTML = '<strong>Error!</strong> Could not update status.' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                document.body.appendChild(alertDiv);
+                setTimeout(() => {
+                    alertDiv.classList.remove('show');
+                    alertDiv.classList.add('hide');
+                    setTimeout(() => alertDiv.remove(), 500);
+                }, 2500);
+            });
+        });
+        // Listen for select change and submit the form via JS
+        const statusSelect = document.getElementById('status');
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function() {
+                quickActionsForm.requestSubmit();
+            });
+        }
+    }
+});
+</script>
+{% endblock %} 

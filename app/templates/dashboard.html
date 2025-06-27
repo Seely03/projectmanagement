@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Project Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+        <div class="d-flex gap-2">
+            <!-- Dynamic Search Bar -->
+            <div class="position-relative" style="width: 300px;">
+                <input type="text" class="form-control" id="projectSearch" 
+                       placeholder="Search projects..." 
+                       autocomplete="off">
+            </div>
+            
+            <!-- Quick Filter for Admins -->
+            {% if current_user.is_admin %}
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-filter"></i> Quick Filter
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ url_for('projects') }}">All Projects</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('projects', filter='assigned') }}">My Assigned</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('projects', filter='owned') }}">My Owned</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('projects', filter='all') }}">View All with Filters</a></li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <a href="{{ url_for('new_project') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Project
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list"></i> Projects Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>Total Projects</span>
+                        <span class="badge bg-primary rounded-pill">{{ projects|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>In Progress</span>
+                        <span class="badge bg-warning rounded-pill">{{ projects|selectattr('status', 'equalto', 'In Progress')|list|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>Completed</span>
+                        <span class="badge bg-success rounded-pill">{{ projects|selectattr('status', 'equalto', 'Completed')|list|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>On Hold</span>
+                        <span class="badge bg-secondary rounded-pill">{{ projects|selectattr('status', 'equalto', 'On Hold')|list|length }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>Overdue</span>
+                        <span class="badge bg-danger rounded-pill">
+                            {{ projects|selectattr('end_date')|selectattr('status', 'ne', 'Completed')|selectattr('end_date', '<', now)|list|length }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('projects') }}" class="btn btn-sm btn-outline-primary w-100">
+                        View All Projects <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram"></i> Recent Projects
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if projects %}
+                    <div class="list-group list-group-flush">
+                        {% for project in (projects|sort(attribute='created_at', reverse=True))[:5] %}
+                        <a href="{{ url_for('view_project', project_id=project.id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ project.title }}</h5>
+                                <small>
+                                    {% if project.status == 'In Progress' %}
+                                    <span class="badge bg-warning">{{ project.status }}</span>
+                                    {% elif project.status == 'Completed' %}
+                                    <span class="badge bg-success">{{ project.status }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ project.status }}</span>
+                                    {% endif %}
+                                    {% if project.end_date and project.end_date < now and project.status != 'Completed' %}
+                                    <span class="badge bg-danger ms-1" title="Project is overdue">
+                                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                                    </span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <p class="mb-1">{{ project.description|truncate(100) }}</p>
+                            <small>{{ project.created_at.strftime('%Y-%m-%d') }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <p>No projects found. Create your first project!</p>
+                        <a href="{{ url_for('new_project') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> New Project
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i> Recent Tasks
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Project</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Effort Points</th>
+                                    <th>Assignee</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set found_tasks = [] %}
+                                {% for project in projects %}
+                                    {% set tasks_with_dates = [] %}
+                                    {% set tasks_without_dates = [] %}
+                                    {% for task in project.tasks %}
+                                        {% if task.due_date %}
+                                            {% set _ = tasks_with_dates.append(task) %}
+                                        {% else %}
+                                            {% set _ = tasks_without_dates.append(task) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set sorted_tasks = tasks_with_dates|sort(attribute='due_date') + tasks_without_dates %}
+                                    {% for task in (sorted_tasks)[:3] %}
+                                        {% if found_tasks|length < 5 %}
+                                            {% set _ = found_tasks.append(task) %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('view_task', project_id=task.project.id, task_id=task.id) }}" class="text-decoration-none">
+                                                        {{ task.title }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ task.project.title }}</td>
+                                                <td>
+                                                    {% if task.status == 'To Do' %}
+                                                    <span class="badge bg-secondary">{{ task.status }}</span>
+                                                    {% elif task.status == 'In Progress' %}
+                                                    <span class="badge bg-warning">{{ task.status }}</span>
+                                                    {% else %}
+                                                    <span class="badge bg-success">{{ task.status }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if task.priority == 'High' %}
+                                                    <span class="badge bg-danger">{{ task.priority }}</span>
+                                                    {% elif task.priority == 'Medium' %}
+                                                    <span class="badge bg-warning">{{ task.priority }}</span>
+                                                    {% else %}
+                                                    <span class="badge bg-info">{{ task.priority }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary">
+                                                        {{ task.effort_points }} points
+                                                    </span>
+                                                </td>
+                                                <td>{{ task.assignee.username if task.assignee else 'Unassigned' }}</td>
+                                                <td class="text-center">
+                                                    <div class="btn-group">
+                                                        <a href="{{ url_for('view_task', project_id=task.project.id, task_id=task.id) }}" 
+                                                           class="btn btn-sm btn-outline-primary"
+                                                           data-bs-toggle="tooltip" 
+                                                           data-bs-placement="top" 
+                                                           title="View Task">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        {% if current_user.is_admin or (task.user_id == current_user.id) or (task.project.user_id == current_user.id) %}
+                                                        <a href="{{ url_for('edit_task', project_id=task.project.id, task_id=task.id) }}" 
+                                                           class="btn btn-sm btn-outline-warning"
+                                                           data-bs-toggle="tooltip" 
+                                                           data-bs-placement="top" 
+                                                           title="Edit Task">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        {% endif %}
+                                                        {% if current_user.is_admin or (task.project.user_id == current_user.id) %}
+                                                        <span data-bs-toggle="tooltip" 
+                                                              data-bs-placement="top" 
+                                                              title="Delete Task">
+                                                            <button type="button" 
+                                                                    class="btn btn-sm btn-outline-danger" 
+                                                                    data-bs-toggle="modal" 
+                                                                    data-bs-target="#deleteTaskModal{{ task.id }}">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </span>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            <!-- Delete Task Modal -->
+                                            <div class="modal fade" id="deleteTaskModal{{ task.id }}" tabindex="-1" aria-labelledby="deleteTaskModalLabel{{ task.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="deleteTaskModalLabel{{ task.id }}">Confirm Delete</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to delete the task "{{ task.title }}"?</p>
+                                                            <p class="text-danger">This action cannot be undone.</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ url_for('delete_task', project_id=task.project.id, task_id=task.id) }}" method="POST">
+                                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                                
+                                {% if found_tasks|length == 0 %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-3">
+                                        No tasks found.
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize all tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // Dynamic search functionality
+        let searchTimeout;
+        const searchInput = $('#projectSearch');
+        const recentProjectsSection = $('.col-md-8 .card-body');
+        
+        // Search function that updates the Recent Projects section
+        function performSearch(query) {
+            if (query.length < 2) {
+                // If search is too short, reload the page to show original recent projects
+                location.reload();
+                return;
+            }
+            
+            // Show loading state in Recent Projects section
+            recentProjectsSection.html(`
+                <div class="text-center py-4">
+                    <div class="search-loading">Searching projects...</div>
+                </div>
+            `);
+            
+            $.ajax({
+                url: "{{ url_for('api_search_projects') }}",
+                method: 'GET',
+                data: { q: query },
+                timeout: 5000,
+                success: function(data) {
+                    updateRecentProjects(data.projects, query);
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = 'Error loading search results';
+                    if (status === 'timeout') {
+                        errorMessage = 'Search request timed out. Please try again.';
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'Search endpoint not found.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error. Please try again later.';
+                    }
+                    
+                    recentProjectsSection.html(`
+                        <div class="text-center py-4">
+                            <h4>Error loading results</h4>
+                            <p class="text-danger">${errorMessage}</p>
+                            <button type="button" class="btn btn-primary" onclick="location.reload()">
+                                <i class="fas fa-refresh"></i> Reload Page
+                            </button>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Update the Recent Projects section with search results
+        function updateRecentProjects(projects, query) {
+            if (projects.length === 0) {
+                recentProjectsSection.html(`
+                    <div class="text-center py-4">
+                        <h4>No projects found</h4>
+                        <p>No projects match your search criteria.</p>
+                        <button type="button" class="btn btn-primary" onclick="clearSearch()">
+                            <i class="fas fa-times"></i> Clear Search
+                        </button>
+                    </div>
+                `);
+                return;
+            }
+            
+            let html = '';
+            projects.forEach(function(project) {
+                const title = project.title;
+                const description = project.description;
+                const status = getStatusBadge(project.status);
+                const overdueBadge = project.is_overdue ? '<span class="badge bg-danger ms-1" title="Project is overdue"><i class="fas fa-exclamation-triangle"></i> Overdue</span>' : '';
+                
+                html += `
+                    <a href="${project.url}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">${title}</h5>
+                            <small>
+                                ${status}
+                                ${overdueBadge}
+                            </small>
+                        </div>
+                        <p class="mb-1">${description}</p>
+                        <small>${project.created_at}</small>
+                    </a>
+                `;
+            });
+            
+            // Add "View All Results" link if there are many results
+            if (projects.length >= 10) {
+                html += `
+                    <div class="list-group-item text-center">
+                        <a href="{{ url_for('projects') }}?search=${encodeURIComponent(query)}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-search"></i> View All Results (${projects.length}+)
+                        </a>
+                    </div>
+                `;
+            }
+            
+            recentProjectsSection.html('<div class="list-group list-group-flush">' + html + '</div>');
+        }
+        
+        // Get status badge HTML
+        function getStatusBadge(status) {
+            if (status === 'In Progress') {
+                return '<span class="badge bg-warning">' + status + '</span>';
+            } else if (status === 'Completed') {
+                return '<span class="badge bg-success">' + status + '</span>';
+            } else {
+                return '<span class="badge bg-secondary">' + status + '</span>';
+            }
+        }
+        
+        // Search input event handlers
+        searchInput.on('input', function() {
+            const query = $(this).val().trim();
+            
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+            
+            // Set new timeout for debouncing
+            searchTimeout = setTimeout(function() {
+                if (query === '') {
+                    // If search is cleared, reload the page to show original recent projects
+                    location.reload();
+                } else {
+                    performSearch(query);
+                }
+            }, 300);
+        });
+        
+        // Handle keyboard navigation
+        searchInput.on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                $(this).blur();
+            }
+        });
+        
+        // Clear search function
+        function clearSearch() {
+            searchInput.val('');
+            location.reload();
+        }
+        
+        // Make functions globally available
+        window.clearSearch = clearSearch;
+    });
+</script>
+{% endblock %}

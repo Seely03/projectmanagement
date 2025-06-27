@@ -1,0 +1,498 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects - Project Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-project-diagram me-2"></i>Projects</h1>
+        <a href="{{ url_for('new_project') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Project
+        </a>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Dynamic Search Input -->
+                <div class="col-md-6">
+                    <label for="projectSearch" class="form-label">Search Projects</label>
+                    <div class="position-relative">
+                        <input type="text" class="form-control" id="projectSearch" 
+                               placeholder="Search by title, description, status, or priority..." 
+                               value="{{ search_query }}"
+                               autocomplete="off">
+                    </div>
+                </div>
+                
+                <!-- Filter Options (Admin Only) -->
+                {% if current_user.is_admin %}
+                <div class="col-md-4">
+                    <label for="filter" class="form-label">Filter Projects</label>
+                    <select class="form-select" id="filter" name="filter">
+                        <option value="all" {{ 'selected' if filter_type == 'all' else '' }}>All Projects</option>
+                        <option value="assigned" {{ 'selected' if filter_type == 'assigned' else '' }}>My Assigned Projects</option>
+                        <option value="owned" {{ 'selected' if filter_type == 'owned' else '' }}>My Owned Projects</option>
+                    </select>
+                </div>
+                {% endif %}
+                
+                <!-- Action Buttons -->
+                <div class="col-md-{{ '2' if current_user.is_admin else '6' }}">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="applyFilter" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Apply
+                        </button>
+                        <button type="button" id="clearAll" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div id="resultsSummary" class="alert alert-info mb-4" style="display: none;">
+        <i class="fas fa-info-circle"></i>
+        <span id="summaryText"></span>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body p-0">
+            <div id="projectsTableContainer">
+                {% if projects %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Tasks</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectsTableBody">
+                            {% for project in projects %}
+                            <tr>
+                                <td><a href="{{ url_for('view_project', project_id=project.id) }}">{{ project.title }}</a></td>
+                                <td>
+                                    {% if project.status == 'In Progress' %}
+                                    <span class="badge bg-warning">{{ project.status }}</span>
+                                    {% if project.end_date and project.end_date < now %}
+                                    <span class="badge bg-danger ms-1" title="Project is overdue">
+                                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                                    </span>
+                                    {% endif %}
+                                    {% elif project.status == 'Completed' %}
+                                    <span class="badge bg-success">{{ project.status }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ project.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if project.priority == 'High' %}
+                                    <span class="badge bg-danger">{{ project.priority }}</span>
+                                    {% elif project.priority == 'Medium' %}
+                                    <span class="badge bg-warning">{{ project.priority }}</span>
+                                    {% else %}
+                                    <span class="badge bg-info">{{ project.priority }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ project.start_date.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    {% if project.end_date %}
+                                    {{ project.end_date.strftime('%Y-%m-%d') }}
+                                    {% if project.end_date < now and project.status != 'Completed' %}
+                                    <span class="badge bg-danger ms-2" title="Project is overdue">
+                                        <i class="fas fa-exclamation-triangle"></i> Overdue
+                                    </span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">None</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary rounded-pill">{{ project.tasks|length }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('view_project', project_id=project.id) }}" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-placement="top" 
+                                           title="View Project">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('edit_project', project_id=project.id) }}" 
+                                           class="btn btn-sm btn-outline-warning"
+                                           data-bs-toggle="tooltip" 
+                                           data-bs-placement="top" 
+                                           title="Edit Project">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <span data-bs-toggle="tooltip" 
+                                              data-bs-placement="top" 
+                                              title="Delete Project">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteProjectModal{{ project.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Delete Project Modal -->
+                            <div class="modal fade" id="deleteProjectModal{{ project.id }}" tabindex="-1" aria-labelledby="deleteProjectModalLabel{{ project.id }}" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="deleteProjectModalLabel{{ project.id }}">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete the project "{{ project.title }}"?</p>
+                                            <p class="text-danger">This action cannot be undone. All tasks associated with this project will also be deleted.</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST">
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <h4>No projects found</h4>
+                    <p>Get started by creating your first project!</p>
+                    <a href="{{ url_for('new_project') }}" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus"></i> New Project
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize all tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+        
+        // Dynamic search functionality
+        let searchTimeout;
+        const searchInput = $('#projectSearch');
+        const projectsTableBody = $('#projectsTableBody');
+        const projectsTableContainer = $('#projectsTableContainer');
+        const resultsSummary = $('#resultsSummary');
+        const summaryText = $('#summaryText');
+        const filterSelect = $('#filter');
+        
+        // Search function that updates the main table
+        function performSearch(query) {
+            // Show loading state in main table
+            projectsTableContainer.html(`
+                <div class="text-center py-5">
+                    <div class="search-loading">Searching projects...</div>
+                </div>
+            `);
+            
+            const filterValue = filterSelect.val();
+            
+            $.ajax({
+                url: "{{ url_for('api_search_projects') }}",
+                method: 'GET',
+                data: { 
+                    q: query,
+                    filter: filterValue
+                },
+                timeout: 5000,
+                success: function(data) {
+                    updateProjectsTable(data.projects, query, data.filter);
+                },
+                error: function(xhr, status, error) {
+                    let errorMessage = 'Error loading search results';
+                    if (status === 'timeout') {
+                        errorMessage = 'Search request timed out. Please try again.';
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'Search endpoint not found.';
+                    } else if (xhr.status >= 500) {
+                        errorMessage = 'Server error. Please try again later.';
+                    }
+                    
+                    projectsTableContainer.html(`
+                        <div class="text-center py-5">
+                            <h4>Error loading results</h4>
+                            <p class="text-danger">${errorMessage}</p>
+                            <button type="button" class="btn btn-primary" onclick="location.reload()">
+                                <i class="fas fa-refresh"></i> Reload Page
+                            </button>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Update the main projects table
+        function updateProjectsTable(projects, query, filter) {
+            if (projects.length === 0) {
+                if (query) {
+                    projectsTableContainer.html(`
+                        <div class="text-center py-5">
+                            <h4>No projects found</h4>
+                            <p>No projects match your search criteria.</p>
+                            <button type="button" class="btn btn-primary" onclick="clearSearch()">
+                                <i class="fas fa-times"></i> Clear Search
+                            </button>
+                        </div>
+                    `);
+                } else {
+                    projectsTableContainer.html(`
+                        <div class="text-center py-5">
+                            <h4>No projects found</h4>
+                            <p>No projects match the current filter criteria.</p>
+                            <button type="button" class="btn btn-primary" onclick="clearSearch()">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </button>
+                        </div>
+                    `);
+                }
+                resultsSummary.hide();
+                return;
+            }
+            
+            let tableHtml = `
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Tasks</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            projects.forEach(function(project) {
+                const title = project.title;
+                const status = getStatusBadge(project.status);
+                const priority = getPriorityBadge(project.priority);
+                const overdueBadge = project.is_overdue ? '<span class="badge bg-danger ms-1" title="Project is overdue"><i class="fas fa-exclamation-triangle"></i> Overdue</span>' : '';
+                
+                tableHtml += `
+                    <tr>
+                        <td><a href="${project.url}">${title}</a></td>
+                        <td>
+                            ${status}
+                            ${overdueBadge}
+                        </td>
+                        <td>${priority}</td>
+                        <td>${project.start_date || 'None'}</td>
+                        <td>
+                            ${project.end_date || '<span class="text-muted">None</span>'}
+                            ${project.is_overdue ? '<span class="badge bg-danger ms-2" title="Project is overdue"><i class="fas fa-exclamation-triangle"></i> Overdue</span>' : ''}
+                        </td>
+                        <td>
+                            <span class="badge bg-primary rounded-pill">${project.task_count} tasks</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <a href="${project.url}" 
+                                   class="btn btn-sm btn-outline-primary"
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="View Project">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="${project.url.replace('/view', '/edit')}" 
+                                   class="btn btn-sm btn-outline-warning"
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="top" 
+                                   title="Edit Project">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <span data-bs-toggle="tooltip" 
+                                      data-bs-placement="top" 
+                                      title="Delete Project">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteProjectModal${project.id}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            projectsTableContainer.html(tableHtml);
+            
+            // Update summary
+            let filterText = '';
+            if (filter === 'assigned') {
+                filterText = 'My Assigned Projects';
+            } else if (filter === 'owned') {
+                filterText = 'My Owned Projects';
+            } else {
+                filterText = 'All Projects';
+            }
+            
+            if (query) {
+                summaryText.html(`Showing ${projects.length} project(s) matching "${query}" in ${filterText}`);
+            } else {
+                summaryText.html(`Showing ${projects.length} project(s) in ${filterText}`);
+            }
+            resultsSummary.show();
+            
+            // Reinitialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+        }
+        
+        // Get status badge HTML
+        function getStatusBadge(status) {
+            if (status === 'In Progress') {
+                return '<span class="badge bg-warning">' + status + '</span>';
+            } else if (status === 'Completed') {
+                return '<span class="badge bg-success">' + status + '</span>';
+            } else {
+                return '<span class="badge bg-secondary">' + status + '</span>';
+            }
+        }
+        
+        // Get priority badge HTML
+        function getPriorityBadge(priority) {
+            if (priority === 'High') {
+                return '<span class="badge bg-danger">' + priority + '</span>';
+            } else if (priority === 'Medium') {
+                return '<span class="badge bg-warning">' + priority + '</span>';
+            } else {
+                return '<span class="badge bg-info">' + priority + '</span>';
+            }
+        }
+        
+        // Clear search function
+        function clearSearch() {
+            searchInput.val('');
+            resultsSummary.hide();
+            location.reload();
+        }
+        
+        // Search input event handlers
+        searchInput.on('input', function() {
+            const query = $(this).val().trim();
+            
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+            
+            // Set new timeout for debouncing
+            searchTimeout = setTimeout(function() {
+                if (query === '') {
+                    // If search is cleared, reload the page to show all projects
+                    location.reload();
+                } else {
+                    performSearch(query);
+                }
+            }, 300);
+        });
+        
+        // Handle keyboard navigation
+        searchInput.on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                $(this).blur();
+            }
+        });
+        
+        // Apply filter button
+        $('#applyFilter').on('click', function() {
+            const searchQuery = searchInput.val().trim();
+            const filterValue = filterSelect.val();
+            
+            if (searchQuery) {
+                // If there's a search query, load filtered search results
+                performSearch(searchQuery);
+            } else {
+                // If no search query, load filtered results
+                loadFilteredResults(filterValue);
+            }
+        });
+        
+        // Load filtered results without search
+        function loadFilteredResults(filterValue) {
+            // Show loading state in main table
+            projectsTableContainer.html(`
+                <div class="text-center py-5">
+                    <div class="search-loading">Loading filtered results...</div>
+                </div>
+            `);
+            
+            $.ajax({
+                url: "{{ url_for('api_search_projects') }}",
+                method: 'GET',
+                data: { 
+                    q: '',
+                    filter: filterValue
+                },
+                timeout: 10000,
+                success: function(data) {
+                    updateProjectsTable(data.projects, '', data.filter);
+                },
+                error: function(xhr, status, error) {
+                    projectsTableContainer.html(`
+                        <div class="text-center py-5">
+                            <h4>Error loading results</h4>
+                            <p class="text-danger">Failed to load filtered results. Please try again.</p>
+                            <button type="button" class="btn btn-primary" onclick="location.reload()">
+                                <i class="fas fa-refresh"></i> Reload Page
+                            </button>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Clear all button
+        $('#clearAll').on('click', function() {
+            clearSearch();
+        });
+        
+        // Make functions globally available
+        window.clearSearch = clearSearch;
+    });
+</script>
+{% endblock %} 
