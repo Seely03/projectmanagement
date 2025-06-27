@@ -4,6 +4,7 @@ from app.models.models import User, Project, Task
 import os
 from alembic.config import Config
 from alembic import command
+from flask_migrate import upgrade
 
 # Determine which auth method to use
 use_cognito = os.environ.get('USE_COGNITO_AUTH', 'false').lower() == 'true'
@@ -26,9 +27,15 @@ else:
     print("Using local authentication")
 
 def run_migrations():
-    # Path to alembic.ini
-    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), 'migrations', 'alembic.ini'))
-    command.upgrade(alembic_cfg, 'head')
+    try:
+        # Run Flask-Migrate migrations
+        upgrade()
+        print("Migrations completed successfully")
+    except Exception as e:
+        print(f"Migration failed: {e}")
+        print("Creating tables directly...")
+        db.create_all()
+        print("Tables created successfully")
 
 def seed_sample_data():
     from sample_data import app as sample_app
