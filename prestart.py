@@ -2,16 +2,19 @@ from app import app, db
 from alembic.config import Config
 from alembic import command
 import os
+from sqlalchemy import inspect
 
 def run_migrations():
     alembic_cfg = Config(os.path.join(os.path.dirname(__file__), 'migrations', 'alembic.ini'))
     command.upgrade(alembic_cfg, 'head')
 
 def seed_sample_data():
-    from app.models.models import User
-    # Only seed if there are no users
-    if User.query.count() == 0:
-        import sample_data  # This will run the seeding logic
+    # Check if the 'user' table exists before seeding
+    inspector = inspect(db.engine)
+    if 'user' in inspector.get_table_names():
+        from app.models.models import User
+        if db.session.query(User).count() == 0:
+            import sample_data  # This will run the seeding logic
 
 with app.app_context():
     run_migrations()
