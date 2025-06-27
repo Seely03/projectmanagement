@@ -18,10 +18,10 @@ def seed_sample_data():
         from app.models.models import User
         if db.session.query(User).count() == 0:
             print("Seeding sample data...")
-            import sample_data  # Assumes this script adds users
+            import sample_data
             print("Seeding complete.")
         else:
-            print("User table already has data.")
+            print("Users already seeded.")
     else:
         print("'user' table does not exist. Skipping seeding.")
 
