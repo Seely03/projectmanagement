@@ -14,7 +14,12 @@ def override_csp_headers(response):
     response.headers.pop('X-Content-Security-Policy', None)
     
     # Set a permissive CSP that allows all scripts
-    response.headers['Content-Security-Policy'] = "script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';"
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com 'unsafe-inline'; "
+        "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com 'unsafe-inline'; "
+        "font-src 'self' https://cdnjs.cloudflare.com;"
+    )
     return response
 
 # Determine which auth method to use
