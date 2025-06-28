@@ -36,23 +36,6 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Add CSP headers to allow scripts to run
-@app.after_request
-def add_csp_headers(response):
-    csp_policy = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
-        "https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com; "
-        "style-src 'self' 'unsafe-inline' "
-        "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-        "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self'; "
-        "frame-ancestors 'none';"
-    )
-    response.headers['Content-Security-Policy'] = csp_policy
-    return response
-
 # Admin required decorator
 def admin_required(f):
     @wraps(f)
