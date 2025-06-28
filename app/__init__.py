@@ -46,14 +46,16 @@ def override_csp_headers(response):
     
     # Set a permissive CSP that allows all necessary scripts
     response.headers['Content-Security-Policy'] = (
-        "default-src 'self' https:; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
-        "style-src 'self' 'unsafe-inline' https:; "
-        "font-src 'self' https:; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https:; "
-        "frame-ancestors 'none';"
-    )
+    "default-src 'self' https:; "
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+    "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+    "script-src-attr 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline' https:; "
+    "font-src 'self' https:; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self' https:; "
+    "frame-ancestors 'none';"
+)
     
     return response
 
