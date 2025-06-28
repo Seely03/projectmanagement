@@ -39,24 +39,18 @@ login_manager.login_view = 'login'
 # Override any platform-set CSP headers
 @app.after_request
 def override_csp_headers(response):
-    # Remove any existing CSP headers that might be set by platform
     response.headers.pop('Content-Security-Policy', None)
-    response.headers.pop('X-Content-Security-Policy', None)
-    response.headers.pop('X-WebKit-CSP', None)
-    
-    # Set a permissive CSP that allows all necessary scripts
     response.headers['Content-Security-Policy'] = (
-    "default-src 'self' https:; "
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
-    "script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https:; "
-    "script-src-attr 'self' 'unsafe-inline'; "
-    "style-src 'self' 'unsafe-inline' https:; "
-    "font-src 'self' https:; "
-    "img-src 'self' data: https:; "
-    "connect-src 'self' https:; "
-    "frame-ancestors 'none';"
-)
-    
+        "default-src 'self' https:; "
+        "script-src 'self' 'unsafe-inline' https:; "
+        "script-src-elem 'self' 'unsafe-inline' https:; "
+        "script-src-attr 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "font-src 'self' https:; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https:; "
+        "frame-ancestors 'none';"
+    )
     return response
 
 # Admin required decorator
