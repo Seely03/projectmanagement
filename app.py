@@ -20,7 +20,12 @@ def add_csp_headers(response):
         "connect-src 'self'; "
         "frame-ancestors 'none';"
     )
+    # Try multiple header names to override any defaults
     response.headers['Content-Security-Policy'] = csp_policy
+    response.headers['X-Content-Security-Policy'] = csp_policy
+    # Remove any conflicting headers
+    if 'X-Content-Type-Options' in response.headers:
+        del response.headers['X-Content-Type-Options']
     return response
 
 # Determine which auth method to use
