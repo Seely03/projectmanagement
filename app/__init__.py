@@ -12,8 +12,8 @@ import sys
 load_dotenv()
 
 # Initialize Flask app with correct template and static paths
-app = Flask(__name__, 
-            template_folder='templates', 
+app = Flask(__name__,
+            template_folder='templates',
             static_folder='static')
 
 # Configuration
@@ -36,6 +36,27 @@ migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Override any platform-set CSP headers
+@app.after_request
+def override_csp_headers(response):
+    # Remove any existing CSP headers that might be set by platform
+    response.headers.pop('Content-Security-Policy', None)
+    response.headers.pop('X-Content-Security-Policy', None)
+    response.headers.pop('X-WebKit-CSP', None)
+    
+    # Set a permissive CSP that allows all necessary scripts
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self' https:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "font-src 'self' https:; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https:; "
+        "frame-ancestors 'none';"
+    )
+    
+    return response
+
 # Admin required decorator
 def admin_required(f):
     @wraps(f)
@@ -46,7 +67,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Import models 
+# Import models
 from app.models.models import User, Project, Task, ProjectMember
 
 # Set up the login manager
@@ -89,4 +110,4 @@ def internal_server_error(e):
     return render_template('errors/500.html'), 500
 
 # Import controllers (must be after route definitions to avoid circular imports)
-from app.controllers import auth_controller, project_controller, task_controller 
+from app.controllers import auth_controller, project_controller, task_controller
